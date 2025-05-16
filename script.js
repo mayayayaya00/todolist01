@@ -313,7 +313,7 @@ function addDropTargetEvents(dayCell, targetDate) {
     if (draggedTask && draggedTask.date !== targetDate) {
       firebase.database().ref('tasks/' + draggedTask.id + '/date').set(targetDate);
     }
-  });
+  );
 }
 
 function setProgressBar() {
