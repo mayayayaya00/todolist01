@@ -1,5 +1,3 @@
-// script.js
-
 const addBtn = document.getElementById('addBtn');
 const taskInput = document.getElementById('taskInput');
 const taskDate = document.getElementById('taskDate');
@@ -11,7 +9,6 @@ const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const viewModeSel = document.getElementById('viewMode');
 const progressBarBox = document.getElementById('progressBarBox');
-
 const memoArea = document.getElementById('memoArea');
 const memoMonth = document.getElementById('memoMonth');
 
@@ -66,7 +63,6 @@ taskInput.addEventListener('keypress', function (event) {
   if (event.key === 'Enter') addTask();
 });
 
-// メモ機能（Firebase同期）
 memoArea.addEventListener('input', function () {
   const key = getMemoKey();
   firebase.database().ref('memos/' + key).set(memoArea.value);
@@ -313,8 +309,7 @@ function addDropTargetEvents(dayCell, targetDate) {
     if (draggedTask && draggedTask.date !== targetDate) {
       firebase.database().ref('tasks/' + draggedTask.id + '/date').set(targetDate);
     }
-  
-    
+  });
 }
 
 function setProgressBar() {
@@ -383,3 +378,4 @@ function sortTasks(a, b) {
 showCalendar();
 showMemo();
 loadTasks();
+
