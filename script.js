@@ -34,7 +34,7 @@ function loadTasks() {
     showCalendar(); // カレンダー再描画
   });
 }
-let memos = JSON.parse(localStorage.getItem('memos')) || {};
+
 
 document.querySelectorAll('.priority-btn').forEach(btn => {
     btn.addEventListener('click', function () {
@@ -120,9 +120,8 @@ function addTask() {
             repeat: repeat,
             created: Date.now()
         };
-        tasks.push(task);
+        
     }
-    saveTasks();
     taskInput.value = '';
     showCalendar();
 }
@@ -313,7 +312,6 @@ function addDropTargetEvents(dayCell, targetDate) {
     }
 　　　　});
 　
-            saveTasks();
             showCalendar();
         }
     });
@@ -359,9 +357,7 @@ function setProgressBar() {
     progressBarBox.querySelector('.progress-summary').innerHTML = html;
 }
 
-function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-}
+
 
 function formatDate(date) {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
