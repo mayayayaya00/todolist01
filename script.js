@@ -1,430 +1,395 @@
-/* style.css */
-body {
-  background: #ecf5fb;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', 'Hiragino Sans', Arial, sans-serif;
-}
-.container {
-  max-width: 1000px;
-  margin: 40px auto;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 16px #aac1d6aa;
-  padding: 24px 32px 32px 32px;
+// script.js
+const addBtn = document.getElementById('addBtn');
+const taskInput = document.getElementById('taskInput');
+const taskDate = document.getElementById('taskDate');
+const repeatType = document.getElementById('repeatType');
+const repeatCountInput = document.getElementById('repeatCount');
+const calendar = document.getElementById('calendar');
+const viewTitle = document.getElementById('viewTitle');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const viewModeSel = document.getElementById('viewMode');
+const progressBarBox = document.getElementById('progressBarBox');
+
+const memoArea = document.getElementById('memoArea');
+const memoMonth = document.getElementById('memoMonth');
+
+let today = new Date();
+today.setHours(0, 0, 0, 0);
+let weekOffset = 0;
+let currentViewMode = 'week';
+let currentPriority = '中';
+const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let memos = JSON.parse(localStorage.getItem('memos')) || {};
+
+document.querySelectorAll('.priority-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentPriority = this.dataset.priority;
+    });
+});
+
+viewModeSel.value = currentViewMode;
+viewModeSel.addEventListener('change', function () {
+    currentViewMode = this.value;
+    weekOffset = 0;
+    showCalendar();
+    showMemo();
+});
+prevBtn.addEventListener('click', () => {
+    weekOffset--;
+    showCalendar();
+    showMemo();
+});
+nextBtn.addEventListener('click', () => {
+    weekOffset++;
+    showCalendar();
+    showMemo();
+});
+addBtn.addEventListener('click', addTask);
+taskInput.addEventListener('keypress', function (event) {
+    if (event.key === 'Enter') addTask();
+});
+
+// メモ機能
+memoArea.addEventListener('input', function () {
+    const key = getMemoKey();
+    memos[key] = memoArea.value;
+    localStorage.setItem('memos', JSON.stringify(memos));
+});
+
+function getMemoKey() {
+    // 現在表示中の年月を取得
+    let date;
+    if (currentViewMode === 'week') {
+        const now = new Date(today.getTime());
+        now.setDate(now.getDate() + weekOffset * 7);
+        date = now;
+    } else {
+        date = new Date(today.getFullYear(), today.getMonth() + weekOffset, 1);
+    }
+    return `${date.getFullYear()}-${('0'+(date.getMonth()+1)).slice(-2)}`;
 }
 
-/* ヘッダー横並び */
-.header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 36px;
-  margin-bottom: 10px;
-}
-h1 {
-  color: #2d3e50;
-  text-align: left;
-  letter-spacing: 0.05em;
-  margin: 0 0 0 0;
-  font-size: 2em;
-  flex-shrink: 0;
+function showMemo() {
+    const key = getMemoKey();
+    memoMonth.textContent = key.replace('-', '年') + '月';
+    memoArea.value = memos[key] || '';
 }
 
-/* メモボックス */
-.memo-box {
-  min-width: 220px;
-  max-width: 320px;
-  width: 30vw;
-  background: #f7fbff;
-  border-radius: 12px;
-  box-shadow: 0 1px 8px #cde2f3aa;
-  padding: 12px 14px 10px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-.memo-title {
-  font-weight: bold;
-  color: #4fbbe2;
-  font-size: 1.08em;
-  margin-bottom: 6px;
-  letter-spacing: 0.05em;
-}
-#memoArea {
-  width: 100%;
-  min-height: 64px;
-  resize: vertical;
-  border-radius: 8px;
-  border: 1px solid #c1d0db;
-  padding: 8px;
-  font-size: 1em;
-  background: #fff;
-  box-sizing: border-box;
-  margin-bottom: 0;
+function addTask() {
+    const text = taskInput.value.trim();
+    const dateStr = taskDate.value;
+    const priority = currentPriority;
+    if (text === '' || dateStr === '') return;
+
+    const repeat = repeatType.value;
+    const repeatCount = parseInt(repeatCountInput.value) || 1;
+    let baseDate = new Date(dateStr + 'T00:00:00');
+
+    for (let i = 0; i < repeatCount; i++) {
+        let newDate = new Date(baseDate.getTime());
+        switch (repeat) {
+            case 'daily':
+                newDate.setDate(baseDate.getDate() + i);
+                break;
+            case 'weekly':
+                newDate.setDate(baseDate.getDate() + i * 7);
+                break;
+            case 'monthly':
+                newDate.setMonth(baseDate.getMonth() + i);
+                break;
+            case 'none':
+            default:
+                break;
+        }
+        const task = {
+            text: text,
+            date: formatDateForKey(newDate),
+            priority: priority,
+            completed: false,
+            repeat: repeat,
+            created: Date.now()
+        };
+        tasks.push(task);
+    }
+    saveTasks();
+    taskInput.value = '';
+    showCalendar();
 }
 
-/* --- 既存のCSSはそのまま下に続く --- */
-.controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 16px;
-  gap: 10px;
+function showCalendar() {
+    calendar.innerHTML = '';
+    setProgressBar();
+    if (currentViewMode === 'week') {
+        showWeekView();
+    } else {
+        showMonthView();
+    }
 }
-.controls button {
-  background: #bdd7ee;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  color: #2d3e50;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background 0.2s;
+
+function showWeekView() {
+    const now = new Date(today.getTime());
+    now.setDate(now.getDate() + weekOffset * 7);
+    const weekStart = new Date(now.getTime());
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekDates = [];
+    for (let i = 0; i < 7; ++i) {
+        let d = new Date(weekStart.getTime());
+        d.setDate(weekStart.getDate() + i);
+        weekDates.push(d);
+    }
+    const startStr = formatDate(weekDates[0]);
+    const endStr = formatDate(weekDates[6]);
+    viewTitle.textContent = `${startStr} 〜 ${endStr}`;
+    const weekRow = document.createElement('div');
+    weekRow.className = 'week-row';
+    for (let i = 0; i < 7; ++i) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'day-cell';
+        if (isToday(weekDates[i])) {
+            dayCell.classList.add('today');
+        }
+        addDropTargetEvents(dayCell, formatDateForKey(weekDates[i]));
+        const head = document.createElement('div');
+        head.className = 'day-header';
+        head.textContent = WEEK_DAYS[i];
+        dayCell.appendChild(head);
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'day-date';
+        dateDiv.textContent = formatDateYMD(weekDates[i]);
+        dayCell.appendChild(dateDiv);
+        const ul = document.createElement('ul');
+        ul.className = 'task-list';
+        const dayStr = formatDateForKey(weekDates[i]);
+        const dayTasks = tasks.filter(t => t.date === dayStr);
+        dayTasks.sort(sortTasks);
+        for (const task of dayTasks) {
+            ul.appendChild(buildTaskLi(task));
+        }
+        dayCell.addEventListener('click', (e) => {
+            if (
+                e.target.classList.contains('task-item') ||
+                e.target.classList.contains('checkbox-custom') ||
+                e.target.classList.contains('cancel-btn')
+            ) return;
+            taskDate.value = formatDateForKey(weekDates[i]);
+        });
+        dayCell.appendChild(ul);
+        weekRow.appendChild(dayCell);
+    }
+    calendar.appendChild(weekRow);
 }
-.controls button:hover {
-  background: #92c6e6;
+
+function showMonthView() {
+    const now = new Date(today.getFullYear(), today.getMonth() + weekOffset, 1);
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOffset = start.getDay();
+    const gridDays = [];
+    let d = new Date(start);
+    d.setDate(d.getDate() - startOffset);
+    for (let i = 0; i < 42; i++) {
+        gridDays.push(new Date(d.getTime()));
+        d.setDate(d.getDate() + 1);
+    }
+    const monthGrid = document.createElement('div');
+    monthGrid.className = 'month-grid';
+    for (let i = 0; i < 7; i++) {
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'month-day-header';
+        dayHeader.textContent = WEEK_DAYS[i];
+        monthGrid.appendChild(dayHeader);
+    }
+    for (let i = 0; i < gridDays.length; i++) {
+        const day = gridDays[i];
+        const dayCell = document.createElement('div');
+        dayCell.className = 'month-day';
+        if (isToday(day)) {
+            dayCell.classList.add('today');
+        }
+        dayCell.style.background = (day.getMonth() === now.getMonth()) ? '#f7fbff' : '#f0f5fa';
+        addDropTargetEvents(dayCell, formatDateForKey(day));
+        const dayHead = document.createElement('div');
+        dayHead.className = 'month-day-header';
+        dayHead.textContent = day.getDate();
+        dayCell.appendChild(dayHead);
+        const ul = document.createElement('ul');
+        ul.className = 'task-list';
+        const dayStr = formatDateForKey(day);
+        let dayTasks = tasks.filter(t => t.date === dayStr);
+        dayTasks.sort(sortTasks);
+        for (const task of dayTasks) {
+            ul.appendChild(buildTaskLi(task));
+        }
+        dayCell.appendChild(ul);
+        if (day.getMonth() === now.getMonth()) {
+            dayCell.addEventListener('click', (e) => {
+                if (
+                    e.target.classList.contains('task-item') ||
+                    e.target.classList.contains('checkbox-custom') ||
+                    e.target.classList.contains('cancel-btn')
+                ) return;
+                taskDate.value = formatDateForKey(day);
+            });
+        }
+        monthGrid.appendChild(dayCell);
+    }
+    calendar.appendChild(monthGrid);
+    viewTitle.textContent = `${now.getFullYear()}年 ${now.getMonth() + 1}月`;
 }
-#viewTitle {
-  font-weight: bold;
-  font-size: 1.13em;
-  color: #2d3e50;
-  margin: 0 8px;
+
+let draggedTask = null;
+
+function buildTaskLi(task) {
+    const li = document.createElement('li');
+    li.className = 'task-item';
+    li.setAttribute('data-priority', task.priority);
+    li.setAttribute('draggable', 'true');
+    li.addEventListener('dragstart', function (e) {
+        draggedTask = task;
+        li.classList.add('dragging');
+        setTimeout(() => li.classList.remove('dragging'), 200);
+    });
+    li.addEventListener('dragend', function () {
+        draggedTask = null;
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+    });
+    const controls = document.createElement('div');
+    controls.className = 'task-controls';
+    // チェックボックス
+    const checkbox = document.createElement('div');
+    checkbox.className = `checkbox-custom${task.completed ? ' checked' : ''}`;
+    checkbox.tabIndex = 0;
+    checkbox.setAttribute('aria-label', '完了');
+    checkbox.addEventListener('click', (e) => {
+        task.completed = !task.completed;
+        saveTasks();
+        li.classList.toggle('completed', task.completed);
+        checkbox.classList.toggle('checked', task.completed);
+    });
+    controls.appendChild(checkbox);
+    // 削除ボタン
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'cancel-btn';
+    cancelBtn.title = "削除";
+    cancelBtn.type = "button";
+    cancelBtn.innerHTML = '×';
+    cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tasks = tasks.filter(
+            t => !(
+                t.text === task.text &&
+                t.date === task.date &&
+                t.priority === task.priority &&
+                t.created === task.created
+            )
+        );
+        saveTasks();
+        li.remove();
+    });
+    controls.appendChild(cancelBtn);
+    li.appendChild(controls);
+    // テキスト
+    const textSpan = document.createElement('span');
+    textSpan.textContent = task.text;
+    li.appendChild(textSpan);
+    if (task.completed) li.classList.add('completed');
+    return li;
 }
-#viewMode {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #bdd7ee;
-  background: #f7fbff;
-  color: #2d3e50;
-  font-size: 1em;
+
+function addDropTargetEvents(dayCell, targetDate) {
+    dayCell.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (!dayCell.classList.contains('drop-target')) dayCell.classList.add('drop-target');
+    });
+    dayCell.addEventListener('dragleave', e => {
+        dayCell.classList.remove('drop-target');
+    });
+    dayCell.addEventListener('drop', e => {
+        dayCell.classList.remove('drop-target');
+        if (draggedTask && draggedTask.date !== targetDate) {
+            tasks.push({
+                text: draggedTask.text,
+                date: targetDate,
+                priority: draggedTask.priority,
+                completed: false,
+                repeat: draggedTask.repeat || "",
+                created: Date.now()
+            });
+            saveTasks();
+            showCalendar();
+        }
+    });
 }
-#progressBarBox {
-  margin-bottom: 14px;
-  text-align: center;
+
+function setProgressBar() {
+    let total = 0, done = 0;
+    let dateSet = new Set();
+    if (currentViewMode === 'week') {
+        const now = new Date(today.getTime());
+        now.setDate(now.getDate() + weekOffset * 7);
+        const weekStart = new Date(now.getTime());
+        weekStart.setDate(now.getDate() - now.getDay());
+        for (let i = 0; i < 7; ++i) {
+            let d = new Date(weekStart.getTime());
+            d.setDate(weekStart.getDate() + i);
+            dateSet.add(formatDateForKey(d));
+        }
+    } else {
+        const now = new Date(today.getFullYear(), today.getMonth() + weekOffset, 1);
+        const targetMonth = now.getMonth();
+        for (let d = 1; d <= 31; d++) {
+            let day = new Date(now.getFullYear(), targetMonth, d);
+            if (day.getMonth() !== targetMonth) break;
+            dateSet.add(formatDateForKey(day));
+        }
+    }
+    for (const t of tasks) {
+        if (dateSet.has(t.date)) {
+            total++;
+            if (t.completed) done++;
+        }
+    }
+    let html = '';
+    if (total === 0) {
+        html = `<div class="progress-summary">タスクがありません</div>`;
+        document.querySelector('.progress-bar-fill').style.width = `0%`;
+    } else {
+        const percent = Math.round((done / total) * 100);
+        html = `<div class="progress-summary">進捗: ${done}/${total} (${percent}%)</div>`;
+        document.querySelector('.progress-bar-fill').style.width = `${percent}%`;
+    }
+    progressBarBox.querySelector('.progress-summary').innerHTML = html;
 }
-.progress-summary {
-  font-size: 1em;
-  margin-bottom: 2px;
-  color: #3a4d60;
+
+function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
 }
-.progress-bar-bg {
-  width: 270px;
-  max-width: 92vw;
-  height: 16px;
-  background: #ecf5fb;
-  border-radius: 8px;
-  margin: 0 auto 3px auto;
-  box-shadow: 0px 1px 4px #cde2f3a0;
-  overflow: hidden;
+
+function formatDate(date) {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 }
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #6cb4ee 55%, #84eec5 100%);
-  border-radius: 8px;
-  transition: width 0.35s;
+function formatDateYMD(date) {
+    return `${date.getMonth() + 1}/${date.getDate()}`;
 }
-.input-area {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+function formatDateForKey(date) {
+    const y = date.getFullYear();
+    const m = ('0' + (date.getMonth() + 1)).slice(-2);
+    const d = ('0' + date.getDate()).slice(-2);
+    return `${y}-${m}-${d}`;
 }
-#taskInput, #taskDate {
-  padding: 7px 12px;
-  border: 1px solid #c1d0db;
-  border-radius: 6px;
-  background: #f7fbff;
-  font-size: 1em;
-  transition: border 0.2s;
+function isToday(date) {
+    const todayStr = formatDateForKey(new Date());
+    const dateStr = formatDateForKey(date);
+    return todayStr === dateStr;
 }
-#taskInput:focus, #taskDate:focus {
-  border-color: #76baf9;
-  outline: none;
+function sortTasks(a, b) {
+    const priorityOrder = { '高': 1, '中': 2, '低': 3 };
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
 }
-#addBtn {
-  background: #4fbbe2;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 7px 22px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 1em;
-}
-#addBtn:hover {
-  background: #1d9bd1;
-}
-.priority-select {
-  display: flex;
-  gap: 4px;
-}
-.priority-btn {
-  border: none;
-  padding: 7px 13px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.2s;
-  font-size: 0.98em;
-  opacity: 0.7;
-}
-.priority-btn.high {
-  background: #ff6b6b;
-  color: white;
-}
-.priority-btn.medium {
-  background: #ffe066;
-  color: #333;
-}
-.priority-btn.low {
-  background: #6c5ce7;
-  color: white;
-}
-.priority-btn.active {
-  transform: scale(1.1);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.14);
-  opacity: 1;
-}
-#calendar {
-  margin-top: 21px;
-}
-.week-row {
-  display: flex;
-  background: #e1ecfa;
-  border-radius: 9px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-.day-cell {
-  flex: 1;
-  min-width: 110px;
-  border-right: 1px solid #d3e2ef;
-  padding: 0;
-  position: relative;
-}
-.day-cell:last-child {
-  border-right: none;
-}
-.day-header {
-  background: #bbd8f0;
-  color: #2d3e50;
-  text-align: center;
-  padding: 8px 0 4px 0;
-  font-weight: 600;
-  font-size: 1em;
-  letter-spacing:0.01em;
-  border-bottom: 1px solid #d3e2ef;
-}
-.day-date {
-  color: #5a7ca0;
-  font-size: 0.93em;
-  margin-bottom: 2px;
-  text-align: center;
-}
-.day-cell.today,
-.month-day.today {
-  background: #e3f7fa !important;
-  border: 2px solid #4fbbe2 !important;
-  box-sizing: border-box;
-  z-index: 1;
-}
-.month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  background: #e1ecfa;
-  border-radius: 9px;
-  overflow: hidden;
-}
-.month-day {
-  background: white;
-  min-height: 100px;
-  padding: 7px 4px 5px 4px;
-  border-right: 1px solid #d3e2ef;
-  border-bottom: 1px solid #d3e2ef;
-  position: relative;
-  cursor: pointer;
-  transition: background .2s;
-}
-.month-day:hover {
-  background: #e7f4ff;
-}
-.month-day:nth-child(7n+1) { color: #ff6b6b; }
-.month-day-header {
-  font-weight: bold;
-  color: #5a7ca0;
-  margin-bottom: 3px;
-  font-size: 1.05em;
-}
-.month-day:nth-child(-n+7) {
-  background: #bbd8f0 !important;
-  color: #2d3e50 !important;
-  cursor: default !important;
-}
-.task-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  min-height: 28px;
-}
-.task-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 6px;
-  padding: 4px 6px 4px 6px;
-  border-radius: 6px;
-  font-size: 1em;
-  background: inherit;
-  min-height: 32px;
-}
-.task-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  margin: 0;
-}
-.copy-btn, .checkbox-custom, .cancel-btn {
-  width: 16px;
-  height: 16px;
-  padding: 0 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.copy-btn {
-  background: none !important;
-  border: none;
-  color: #95a6be;
-  font-size: 1em;
-  cursor: pointer;
-  border-radius: 3px;
-  margin: 0;
-  transition: background 0.14s, color 0.16s;
-}
-.copy-btn:hover {
-  color: #65aaff;
-  background: #e3f4ff;
-}
-.checkbox-custom {
-  border: 2px solid #4fbbe2;
-  border-radius: 4px;
-  cursor: pointer;
-  background: #fff;
-  transition: background 0.2s;
-  font-size: 11px;
-  margin: 0 0 1px 0;
-}
-.checkbox-custom.checked {
-  background: #4fbbe2;
-}
-.checkbox-custom.checked::after {
-  content: "✓";
-  color: white;
-  font-size: 10px;
-}
-.cancel-btn {
-  background: none !important;
-  border: none;
-  color: #ff6b6b !important;
-  font-size: 1em;
-  cursor: pointer;
-  line-height: 1;
-  border-radius: 3px;
-  text-align: center;
-  margin: 0;
-}
-.cancel-btn:hover {
-  background: #ffeaea;
-  color: #d12716 !important;
-}
-.task-item span {
-  flex: 1 1 auto;
-  text-align: left;
-  word-break: break-all;
-  font-size: 1em;
-  color: #222;
-  white-space: normal;
-  min-width: 0;
-  max-width: 100%;
-  margin-left: 6px;
-  margin-right: 6px;
-}
-.task-item.dragging {
-  opacity: 0.44;
-  background: #c8effb !important;
-}
-.day-cell.drop-target,
-.month-day.drop-target {
-  outline: 2.5px dashed #32bdee;
-  background: #dff7ff !important;
-  z-index: 1;
-}
-.task-item[data-priority="高"]:not(.completed) { background: #fff2f2; }
-.task-item[data-priority="中"]:not(.completed) { background: #fffad5; }
-.task-item[data-priority="低"]:not(.completed) { background: #eef1fc; }
-.task-item.completed[data-priority="高"] { background: #fff2f2cc !important; border: 1px solid #ffd6d6; }
-.task-item.completed[data-priority="中"] { background: #fffad599 !important; border: 1px solid #fff0c2; }
-.task-item.completed[data-priority="低"] { background: #eef1fcb3 !important; border: 1px solid #d9dfff; }
-.completed {
-  text-decoration: line-through;
-  color: #a8b8c4;
-}
-.completed .checkbox-custom.checked {
-  background: #888 !important;
-  border-color: #666;
-}
-.repeat-options {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.repeat-input {
-  width: 50px;
-  padding: 5px;
-  border: 1px solid #c1d0db;
-  border-radius: 4px;
-}
-@media (max-width: 820px) {
-  .container {
-      max-width: 98vw;
-      padding: 12px 2vw 24px 2vw;
-  }
-  .header-row {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-  }
-  h1 {
-      font-size: 1.2em;
-      margin-bottom: 6px;
-  }
-  .memo-box {
-      width: 100%;
-      min-width: 0;
-      max-width: 100%;
-      margin-bottom: 10px;
-  }
-  .day-cell, .month-day {
-      min-width: 65px;
-      font-size: 0.99em;
-      padding: 4px 2px;
-  }
-  .input-area {
-      gap: 7px;
-  }
-  #calendar {
-      margin-top: 7px;
-  }
-  #progressBarBox .progress-bar-bg {
-      width: 94vw;
-      min-width: 110px;
-  }
-}
+
+// 初期表示
+showCalendar();
+showMemo();
