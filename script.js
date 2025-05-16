@@ -112,19 +112,20 @@ function addTask() {
   taskInput.value = '';
 }
 
-        const task = {
-            text: text,
-            date: formatDateForKey(newDate),
-            priority: priority,
-            completed: false,
-            repeat: repeat,
-            created: Date.now()
-        };
-        
-    }
-    taskInput.value = '';
-    showCalendar();
-}
+       const task = {
+    text: text,
+    date: formatDateForKey(newDate),
+    priority: priority,
+    completed: false,
+    repeat: repeat,
+    created: Date.now()
+};
+
+// ここでFirebaseに保存！
+firebase.database().ref('tasks').push(task);
+
+taskInput.value = '';
+showCalendar();
 
 function showCalendar() {
     calendar.innerHTML = '';
