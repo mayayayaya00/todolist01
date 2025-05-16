@@ -59,6 +59,27 @@
 
       <div id="calendar"></div>
     </div>
+    <!-- ↓↓↓ ここから下をコピペでOK ↓↓↓ -->
+
+    <!-- Firebase SDKの読み込み（必ずscript.jsより上！） -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+      // Firebase設定（databaseURLとstorageBucketも正しく！）
+      var firebaseConfig = {
+        apiKey: "AIzaSyDsFkiV8BwxPK9BZxDSm2SKn6MtwcVelhc",
+        authDomain: "todocalendar-c813b.firebaseapp.com",
+        databaseURL: "https://todocalendar-c813b-default-rtdb.firebaseio.com",
+        projectId: "todocalendar-c813b",
+        storageBucket: "todocalendar-c813b.appspot.com",
+        messagingSenderId: "197204031303",
+        appId: "1:197204031303:web:551d0a91c8f17d4a2bfe62"
+      };
+      // 初期化
+      firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <!-- あなたのJSファイル -->
     <script src="script.js"></script>
 </body>
 </html>
