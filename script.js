@@ -20,7 +20,20 @@ let weekOffset = 0;
 let currentViewMode = 'week';
 let currentPriority = '中';
 const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
-let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let tasks = [];
+
+function loadTasks() {
+  firebase.database().ref('tasks').on('value', (snapshot) => {
+    tasks = [];
+    snapshot.forEach(childSnapshot => {
+      tasks.push({
+        id: childSnapshot.key,
+        ...childSnapshot.val()
+      });
+    });
+    showCalendar(); // カレンダー再描画
+  });
+}
 let memos = JSON.parse(localStorage.getItem('memos')) || {};
 
 document.querySelectorAll('.priority-btn').forEach(btn => {
@@ -55,10 +68,10 @@ taskInput.addEventListener('keypress', function (event) {
 
 // メモ機能
 memoArea.addEventListener('input', function () {
-    const key = getMemoKey();
-    memos[key] = memoArea.value;
-    localStorage.setItem('memos', JSON.stringify(memos));
+    const key = getMemoKey(); // 例: "2024-05"
+    firebase.database().ref('memos/' + key).set(memoArea.value);
 });
+
 
 function getMemoKey() {
     // 現在表示中の年月を取得
@@ -76,35 +89,29 @@ function getMemoKey() {
 function showMemo() {
     const key = getMemoKey();
     memoMonth.textContent = key.replace('-', '年') + '月';
-    memoArea.value = memos[key] || '';
+    firebase.database().ref('memos/' + key).on('value', (snapshot) => {
+        memoArea.value = snapshot.val() || '';
+    });
 }
 
 function addTask() {
-    const text = taskInput.value.trim();
-    const dateStr = taskDate.value;
-    const priority = currentPriority;
-    if (text === '' || dateStr === '') return;
+  const text = taskInput.value.trim();
+  const dateStr = taskDate.value;
+  const priority = currentPriority;
+  if (text === '' || dateStr === '') return;
 
-    const repeat = repeatType.value;
-    const repeatCount = parseInt(repeatCountInput.value) || 1;
-    let baseDate = new Date(dateStr + 'T00:00:00');
+  // Firebaseに保存
+  firebase.database().ref('tasks').push({
+    text: text,
+    date: dateStr,
+    priority: priority,
+    completed: false,
+    created: Date.now()
+  });
 
-    for (let i = 0; i < repeatCount; i++) {
-        let newDate = new Date(baseDate.getTime());
-        switch (repeat) {
-            case 'daily':
-                newDate.setDate(baseDate.getDate() + i);
-                break;
-            case 'weekly':
-                newDate.setDate(baseDate.getDate() + i * 7);
-                break;
-            case 'monthly':
-                newDate.setMonth(baseDate.getMonth() + i);
-                break;
-            case 'none':
-            default:
-                break;
-        }
+  taskInput.value = '';
+}
+
         const task = {
             text: text,
             date: formatDateForKey(newDate),
@@ -264,12 +271,11 @@ function buildTaskLi(task) {
     checkbox.tabIndex = 0;
     checkbox.setAttribute('aria-label', '完了');
     checkbox.addEventListener('click', (e) => {
-        task.completed = !task.completed;
-        saveTasks();
-        li.classList.toggle('completed', task.completed);
-        checkbox.classList.toggle('checked', task.completed);
-    });
-    controls.appendChild(checkbox);
+     // 完了状態を反転してFirebaseに保存
+    firebase.database().ref('tasks').child(task.id).update({ completed: !task.completed });
+});
+controls.appendChild(checkbox);
+    
     // 削除ボタン
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'cancel-btn';
@@ -278,19 +284,11 @@ function buildTaskLi(task) {
     cancelBtn.innerHTML = '×';
     cancelBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        tasks = tasks.filter(
-            t => !(
-                t.text === task.text &&
-                t.date === task.date &&
-                t.priority === task.priority &&
-                t.created === task.created
-            )
-        );
-        saveTasks();
-        li.remove();
-    });
-    controls.appendChild(cancelBtn);
-    li.appendChild(controls);
+      // ここをlocalStorageから削除ではなくFirebaseに変更
+    firebase.database().ref('tasks').child(task.id).remove();
+});
+controls.appendChild(cancelBtn);
+    
     // テキスト
     const textSpan = document.createElement('span');
     textSpan.textContent = task.text;
@@ -307,17 +305,14 @@ function addDropTargetEvents(dayCell, targetDate) {
     dayCell.addEventListener('dragleave', e => {
         dayCell.classList.remove('drop-target');
     });
-    dayCell.addEventListener('drop', e => {
-        dayCell.classList.remove('drop-target');
-        if (draggedTask && draggedTask.date !== targetDate) {
-            tasks.push({
-                text: draggedTask.text,
-                date: targetDate,
-                priority: draggedTask.priority,
-                completed: false,
-                repeat: draggedTask.repeat || "",
-                created: Date.now()
-            });
+　　　dayCell.addEventListener('drop', e => {
+    dayCell.classList.remove('drop-target');
+    if (draggedTask && draggedTask.date !== targetDate) {
+        // 日付だけをFirebaseで更新
+        firebase.database().ref('tasks/' + draggedTask.id + '/date').set(targetDate);
+    }
+　　　　});
+　
             saveTasks();
             showCalendar();
         }
@@ -390,6 +385,9 @@ function sortTasks(a, b) {
     return priorityOrder[a.priority] - priorityOrder[b.priority];
 }
 
+
 // 初期表示
 showCalendar();
 showMemo();
+
+loadTasks();
