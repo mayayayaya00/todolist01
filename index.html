@@ -58,7 +58,6 @@
 
       <div id="calendar"></div>
     </div>
-<body>
   <!-- Insert this script at the bottom of the HTML, but before you use any Firebase services -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js'
@@ -67,7 +66,12 @@
     import { getAnalytics } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-analytics.js'
 
     // Add Firebase products that you want to use
-      const firebaseConfig = {
+    import { getAuth } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js'
+    import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js'
+  </script>
+      <script type="module">
+
+   const firebaseConfig = {
   apiKey: "AIzaSyDsFkiV8BwxPK9BZxDSm2SKn6MtwcVelhc",
   authDomain: "todocalendar-c813b.firebaseapp.com",
   databaseURL: "https://todocalendar-c813b-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -76,8 +80,10 @@
   messagingSenderId: "197204031303",
   appId: "1:197204031303:web:551d0a91c8f17d4a2bfe62"
 };
-    import { getAuth } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js'
-    import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js'
+    
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
   </script>
 </body>
 </html>
