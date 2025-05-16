@@ -275,7 +275,6 @@ function buildTaskLi(task) {
   checkbox.tabIndex = 0;
   checkbox.setAttribute('aria-label', '完了');
   checkbox.addEventListener('click', (e) => {
-    // 完了状態を反転してFirebaseに保存
     firebase.database().ref('tasks').child(task.id).update({ completed: !task.completed });
   });
   controls.appendChild(checkbox);
@@ -294,7 +293,6 @@ function buildTaskLi(task) {
 
   li.appendChild(controls);
 
-  // テキスト
   const textSpan = document.createElement('span');
   textSpan.textContent = task.text;
   li.appendChild(textSpan);
@@ -313,7 +311,6 @@ function addDropTargetEvents(dayCell, targetDate) {
   dayCell.addEventListener('drop', e => {
     dayCell.classList.remove('drop-target');
     if (draggedTask && draggedTask.date !== targetDate) {
-      // 日付だけをFirebaseで更新
       firebase.database().ref('tasks/' + draggedTask.id + '/date').set(targetDate);
     }
   });
